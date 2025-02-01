@@ -2,17 +2,8 @@ import axios from 'axios';
 
 // Determine the current environment
 const isProduction = import.meta.env.PROD;
-const mode = import.meta.env.MODE;
 
-// Log environment details
-console.log('Environment Details:', {
-  isProduction,
-  mode,
-  VITE_API_BASE_URL_LOCAL: import.meta.env.VITE_API_BASE_URL_LOCAL,
-  VITE_API_BASE_URL_PRODUCTION: import.meta.env.VITE_API_BASE_URL_PRODUCTION,
-  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-  importMetaEnv: import.meta.env
-});
+
 
 // Select the appropriate base URL
 export const API_BASE_URL = isProduction 

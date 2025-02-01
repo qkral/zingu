@@ -37,15 +37,12 @@ const Navigation = () => {
           sx={{ flexGrow: 1, cursor: 'pointer' }}
           onClick={() => navigate('/')}
         >
-          Accent Improver
+          Zingu
         </Typography>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button color="inherit" onClick={() => navigate('/games')}>
             Games
-          </Button>
-          <Button color="inherit" onClick={() => navigate('/word-detective')}>
-            Word Detective
           </Button>
           <Button color="inherit" onClick={() => navigate('/coach')}>
             AI Coach

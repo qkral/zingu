@@ -24,7 +24,6 @@ import {
   Alert,
   Collapse,
   Stack,
-  Chip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -52,7 +51,7 @@ import DraggableDrawingCanvas from './DraggableDrawingCanvas';
 import CreateIcon from '@mui/icons-material/Create';
 import StarIcon from '@mui/icons-material/Star';
 import { API_BASE_URL } from '../../config/api';
-import { saveConversation, auth, ensureAuth, getConversationHistory, loadConversation } from '../../firebase';
+import { saveConversation, auth, ensureAuth, loadConversation, getConversationHistory } from '../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import HistoryIcon from '@mui/icons-material/History';
 
@@ -73,6 +72,7 @@ interface Message {
   topic?: string;
   topicName?: string; 
   isLoading?: boolean;
+  timestamp?: number;  // Add optional timestamp property
 }
 
 interface PronunciationFeedback {
@@ -98,6 +98,17 @@ interface HistoryMessage {
   text: string;
   isUser: boolean;
   topic_id: string;
+}
+
+interface Conversation {
+  id: string;
+  messages?: Message[];
+  originalTimestamp?: number;
+  topicName?: string;
+  language?: string;
+  accent?: string;
+  isKidsMode?: boolean;
+  selectedVoiceGender?: 'male' | 'female' | 'kid';
 }
 
 // Voice mapping with male and female options
@@ -160,13 +171,32 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
   const pronunciationAudioPlayerRef = useRef<HTMLAudioElement>(null);
   const pronunciationMediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-  // Use isKidsMode directly from props
-  const isKidsMode = isKidsModeProp;
+  // State for kids mode with prop as initial value
+  const [isKidsMode, setIsKidsMode] = useState(isKidsModeProp);
 
-  // Add debug effect to monitor isKidsMode changes
+  // Effect to update state when prop changes
   useEffect(() => {
-    console.log('isKidsMode changed:', isKidsMode);
+    setIsKidsMode(isKidsModeProp);
+  }, [isKidsModeProp]);
+
+  // Define valid voice gender options
+  type VoiceGender = 'male' | 'female' | 'kid';
+  const [selectedVoiceGender, setSelectedVoiceGender] = useState<VoiceGender>('female');
+
+  // Effect to update voice gender when kids mode changes
+  useEffect(() => {
+    console.log('Kids Mode Changed:', isKidsMode);
+    
+    // Automatically set voice gender when kids mode changes
+    if (isKidsMode) {
+      setSelectedVoiceGender('kid');
+    } else {
+      // Reset to default voice gender when not in kids mode
+      setSelectedVoiceGender('female');
+    }
   }, [isKidsMode]);
+
+
 
   // Pronunciation cleanup effect
   useEffect(() => {
@@ -271,7 +301,6 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>(languages[0].code);
   const [selectedAccent, setSelectedAccent] = useState<string>(languages[0].accents[0].code);
-  const [selectedVoiceGender, setSelectedVoiceGender] = useState<'male' | 'female' | 'kid'>('female');
   const [selectedTopic, setSelectedTopic] = useState<string>('random');
   const [currentPlayingAudioSrc, setCurrentPlayingAudioSrc] = useState<string | null>(null);
   const [explanationButtonClicked, setExplanationButtonClicked] = useState(false);
@@ -436,7 +465,7 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
 
     if (messages.length > 0) {
       try {
-        const conversationId = await saveConversation(messages, currentTopic);
+        const conversationId = await saveConversation(messages, currentTopic ?? undefined, isKidsMode, selectedVoiceGender, selectedAccent); // Convert null to undefined
         console.log('Conversation saved with ID:', conversationId);
         return conversationId;
       } catch (error) {
@@ -445,15 +474,7 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
       }
     }
     return null;
-  }, [messages, currentTopic, isAuthenticated]);
-
-  const handleEndConversation = useCallback(async () => {
-    await handleSaveConversation();
-    // Existing end conversation logic
-    setMessages([]);
-    setCurrentTopic(null);
-    // ... other existing logic
-  }, [handleSaveConversation]);
+  }, [messages, currentTopic, isAuthenticated, isKidsMode, selectedVoiceGender, selectedAccent]);
 
   useEffect(() => {
     if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
@@ -615,9 +636,9 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
   };
 
   const handleVoiceGenderChange = (event: SelectChangeEvent<string>) => {
-    const newVoiceGender = event.target.value;
+    const newVoiceGender = event.target.value as VoiceGender;
     console.log('Voice gender changed to:', newVoiceGender);  
-    setSelectedVoiceGender(newVoiceGender as 'male' | 'female' | 'kid');
+    setSelectedVoiceGender(newVoiceGender);
   };
 
   const handleTopicChange = (event: SelectChangeEvent<string>) => {
@@ -2442,71 +2463,9 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
   }, [isKidsMode]);
 
 
-  const [pastConversations, setPastConversations] = useState<any[]>([]);
+  const [pastConversations, setPastConversations] = useState<Conversation[]>([]);
   const [isPastConversationsOpen, setIsPastConversationsOpen] = useState(false);
   const [isLoadingPastConversations, setIsLoadingPastConversations] = useState(false);
-
-  const handleLoadPastConversations = async () => {
-    console.group('Handle Load Past Conversations');
-    console.log('Function Called', {
-      currentUser: auth.currentUser ? {
-        uid: auth.currentUser.uid,
-        email: auth.currentUser.email
-      } : 'No User'
-    });
-
-    // Ensure user is authenticated
-    if (!auth.currentUser) {
-      console.warn('User must be logged in to view past conversations');
-      console.groupEnd();
-      return;
-    }
-
-    try {
-      // Show loading state
-      setIsLoadingPastConversations(true);
-      console.log('Loading past conversations...');
-
-      // Fetch conversation history
-      const conversations = await getConversationHistory();
-      
-      // Log loaded conversations for debugging
-      console.log('Loaded Past Conversations:', {
-        count: conversations.length,
-        topics: conversations.map(conv => conv.topicName)
-      });
-
-      // Update conversations state first
-      setPastConversations(conversations);
-      
-      // Use functional update to ensure correct state
-      setIsPastConversationsOpen(prevState => {
-        const newState = conversations.length > 0;
-        console.log('Panel State Updated:', {
-          previousState: prevState,
-          newState: newState,
-          conversationsCount: conversations.length
-        });
-        return newState;
-      });
-
-      // Additional logging to confirm state
-      console.log('Panel State After Opening:', {
-        conversationsLength: conversations.length
-      });
-
-    } catch (error) {
-      console.error('Detailed Error loading past conversations:', {
-        errorName: error.name,
-        errorMessage: error.message,
-        errorStack: error.stack
-      });
-    } finally {
-      // Always hide loading state
-      setIsLoadingPastConversations(false);
-      console.groupEnd();
-    }
-  };
 
   const handleSelectPastConversation = async (conversationId: string) => {
     console.group('Select Past Conversation');
@@ -2514,7 +2473,7 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
 
     try {
       // Load the specific conversation
-      const conversation = await loadConversation(conversationId);
+      const conversation: Conversation | null = await loadConversation(conversationId);
       
       if (!conversation) {
         console.error('No conversation found with ID:', conversationId);
@@ -2526,7 +2485,10 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
         id: conversation.id,
         topicName: conversation.topicName,
         messageCount: conversation.messages?.length,
-        originalTimestamp: conversation.originalTimestamp
+        originalTimestamp: conversation.originalTimestamp,
+        isKidsMode: conversation.isKidsMode,
+        selectedVoiceGender: conversation.selectedVoiceGender,
+        accent: conversation.accent  // Add accent logging
       });
 
       // Reset necessary states to prepare for conversation resumption
@@ -2534,13 +2496,25 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
       
       // Set conversation-specific states
       setSelectedLanguage(conversation.language || 'en');
-      setSelectedAccent(conversation.accent || 'neutral');
+      setSelectedAccent(conversation.accent || 'neutral');  // Ensure accent is set
       setSelectedTopic(conversation.topicName || 'random');
       
+      // Set kids mode and voice gender if available
+      setIsKidsMode(conversation.isKidsMode || false);
+      
+      // Validate and set voice gender
+      const validVoiceGenders: VoiceGender[] = ['male', 'female', 'kid'];
+      const loadedVoiceGender = conversation.selectedVoiceGender;
+      const safeVoiceGender = validVoiceGenders.includes(loadedVoiceGender as VoiceGender) 
+        ? loadedVoiceGender 
+        : 'female';
+      
+      setSelectedVoiceGender(safeVoiceGender as VoiceGender);
+
       // Populate messages with correct roles
       if (conversation.messages && conversation.messages.length > 0) {
         // Map messages to ensure correct role and isUser attribute
-        const formattedMessages = conversation.messages.map(msg => ({
+        const formattedMessages = conversation.messages.map((msg: Message) => ({
           ...msg,
           role: msg.role || (msg.isUser ? 'user' : 'assistant'),
           isUser: msg.isUser !== undefined 
@@ -2553,7 +2527,7 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
         
         // Determine the last AI message to start from
         const lastAIMessage = formattedMessages
-          .filter(msg => msg.role === 'assistant')
+          .filter((msg: Message) => msg.role === 'assistant')
           .pop();
         
         if (lastAIMessage) {
@@ -2571,12 +2545,18 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
       setIsPastConversationsOpen(false);
 
       console.log('Conversation Resumed Successfully');
-    } catch (error) {
-      console.error('Error loading past conversation:', {
-        errorName: error.name,
-        errorMessage: error.message,
-        errorStack: error.stack
-      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error loading past conversation:', {
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack
+        });
+        setError(`Failed to load conversation: ${error.message}`);
+      } else {
+        console.error('Unknown error loading past conversation:', error);
+        setError('Failed to load conversation due to an unknown error');
+      }
     } finally {
       setIsLoadingConversation(false);
       console.groupEnd();
@@ -2633,7 +2613,35 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
     );
   };
 
-  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [, setIsLoadingConversation] = useState(false);
+
+  const fetchPastConversations = useCallback(async () => {
+    try {
+      setIsLoadingPastConversations(true);
+      const conversations = await getConversationHistory();
+      
+      // Sort conversations by timestamp, most recent first
+      const sortedConversations = conversations.sort((a, b) => 
+        (b.originalTimestamp || 0) - (a.originalTimestamp || 0)
+      );
+
+      setPastConversations(sortedConversations);
+      console.log('Fetched Past Conversations:', {
+        count: sortedConversations.length
+      });
+    } catch (error) {
+      console.error('Error fetching past conversations:', error);
+      setPastConversations([]);
+    } finally {
+      setIsLoadingPastConversations(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isPastConversationsOpen) {
+      fetchPastConversations();
+    }
+  }, [isPastConversationsOpen, fetchPastConversations]);
 
   if (!hasStarted) {
     return (
@@ -2669,14 +2677,14 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
                 p: 2
               }}
             >
-              {/* Existing past conversations content */}
+              {/* Past conversations content */}
               <Stack 
                 direction="row" 
                 justifyContent="space-between" 
                 alignItems="center" 
                 sx={{ mb: 2 }}
               >
-                <Typography variant="h6" fontWeight="bold">
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                   Past Conversations
                 </Typography>
                 <IconButton 
@@ -2687,62 +2695,73 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
                 </IconButton>
               </Stack>
 
-              <Grid container spacing={2}>
-                {pastConversations.map((conversation) => (
-                  <Grid item xs={12} key={conversation.id}>
-                    <Paper 
-                      variant="outlined"
-                      sx={{ 
-                        p: 2, 
-                        cursor: 'pointer', 
-                        transition: 'all 0.3s ease',
-                        '&:hover': { 
-                          backgroundColor: 'action.hover',
-                          transform: 'scale(1.01)'
-                        } 
-                      }}
-                      onClick={() => {
-                        console.log('Conversation Selected:', {
-                          id: conversation.id,
-                          topicName: conversation.topicName
-                        });
-                        handleSelectPastConversation(conversation.id);
-                        setIsPastConversationsOpen(false);
-                      }}
-                    >
-                      <Grid container justifyContent="space-between" alignItems="center">
-                        <Grid item xs={10}>
-                          <Typography variant="subtitle1" fontWeight="bold">
-                            {conversation.topicName || 'Untitled Conversation'}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {new Date(conversation.originalTimestamp).toLocaleString()}
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
-                            sx={{ 
-                              overflow: 'hidden', 
-                              textOverflow: 'ellipsis', 
-                              whiteSpace: 'nowrap' 
-                            }}
-                          >
-                            {conversation.messages?.[0]?.text?.slice(0, 100) || 'No messages'}
-                          </Typography>
+              {isLoadingPastConversations ? (
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: 200 
+                  }}
+                >
+                  <CircularProgress />
+                </Box>
+              ) : pastConversations.length === 0 ? (
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  align="center"
+                  sx={{ py: 4 }}
+                >
+                  No past conversations found
+                </Typography>
+              ) : (
+                <Grid container spacing={2}>
+                  {pastConversations.map((conversation) => (
+                    <Grid item xs={12} key={conversation.id}>
+                      <Paper 
+                        elevation={2} 
+                        sx={{ 
+                          p: 2, 
+                          cursor: 'pointer', 
+                          transition: 'background-color 0.3s',
+                          '&:hover': {
+                            backgroundColor: 'action.hover'
+                          }
+                        }}
+                        onClick={() => {
+                          console.log('Conversation Selected:', {
+                            id: conversation.id,
+                            topicName: conversation.topicName
+                          });
+                          handleSelectPastConversation(conversation.id);
+                          setIsPastConversationsOpen(false);
+                        }}
+                      >
+                        <Grid container justifyContent="space-between" alignItems="center">
+                          <Grid item xs={10}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                              {conversation.topicName || 'Unnamed Conversation'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {conversation.messages && conversation.messages.length > 0 
+                                ? `${conversation.messages.length} messages` 
+                                : 'No messages'}
+                            </Typography>
+                          </Grid>
+                          <Grid item>
+                            <Typography variant="caption" color="text.secondary">
+                              {conversation.originalTimestamp 
+                                ? new Date(conversation.originalTimestamp).toLocaleString() 
+                                : 'Unknown date'}
+                            </Typography>
+                          </Grid>
                         </Grid>
-                        <Grid item>
-                          <Chip 
-                            label={`${conversation.messages?.length || 0} Messages`} 
-                            size="small" 
-                            color="secondary" 
-                            variant="outlined"
-                          />
-                        </Grid>
-                      </Grid>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
             </Paper>
           </Collapse>
           {/* Main content area */}
@@ -3094,66 +3113,60 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
         <Box
           sx={{
             position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
+            bottom: 16,
+            left: 16,  // Change from 'center' to 'left'
             zIndex: 1000,
-            p: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
-            width: '100%',
-            maxWidth: 'md',
-            margin: '0 auto'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',  // Align items to the start (left)
+            width: 'auto',  // Adjust width as needed
+            backgroundColor: 'transparent'
           }}
         >
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <IconButton
-              color={isRecording ? 'error' : 'primary'}
-              onClick={handleToggleRecording}
-              disabled={isProcessing}
+          <IconButton
+            color={isRecording ? 'error' : 'primary'}
+            onClick={handleToggleRecording}
+            disabled={isProcessing}
+            sx={{
+              width: 56,
+              height: 56,
+              border: 2,
+              borderColor: isRecording ? 'error.main' : 'primary.main',
+              '&:hover': {
+                bgcolor: isRecording ? 'error.light' : 'primary.light',
+                '& .MuiSvgIcon-root': {
+                  color: 'white',
+                },
+              },
+              animation: isRecording ? 'pulse 1.5s infinite' : 'none',
+              '@keyframes pulse': {
+                '0%': {
+                  boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.4)',
+                },
+                '70%': {
+                  boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)',
+                },
+                '100%': {
+                  boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)',
+                },
+              },
+            }}
+          >
+            <MicIcon sx={{ fontSize: 28 }} />
+          </IconButton>
+          <Box sx={{ flex: 1, ml: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+              {isRecording ? 'Recording...' : 'Click the microphone to start speaking'}
+            </Typography>
+            <LinearProgress
+              variant={isRecording ? 'indeterminate' : 'determinate'}
+              value={0}
               sx={{
-                width: 56,
-                height: 56,
-                border: 2,
-                borderColor: isRecording ? 'error.main' : 'primary.main',
-                '&:hover': {
-                  bgcolor: isRecording ? 'error.light' : 'primary.light',
-                  '& .MuiSvgIcon-root': {
-                    color: 'white',
-                  },
-                },
-                animation: isRecording ? 'pulse 1.5s infinite' : 'none',
-                '@keyframes pulse': {
-                  '0%': {
-                    boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.4)',
-                  },
-                  '70%': {
-                    boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)',
-                  },
-                  '100%': {
-                    boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)',
-                  },
-                },
+                height: 4,
+                borderRadius: 2,
+                visibility: isRecording ? 'visible' : 'hidden',
               }}
-            >
-              <MicIcon sx={{ fontSize: 28 }} />
-            </IconButton>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                {isRecording ? 'Recording...' : 'Click the microphone to start speaking'}
-              </Typography>
-              <LinearProgress
-                variant={isRecording ? 'indeterminate' : 'determinate'}
-                value={0}
-                sx={{
-                  height: 4,
-                  borderRadius: 2,
-                  visibility: isRecording ? 'visible' : 'hidden',
-                }}
-              />
-            </Box>
+            />
           </Box>
         </Box>
 
@@ -3515,14 +3528,14 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
             p: 2
           }}
         >
-          {/* Existing past conversations content */}
+          {/* Past conversations content */}
           <Stack 
             direction="row" 
             justifyContent="space-between" 
             alignItems="center" 
             sx={{ mb: 2 }}
           >
-            <Typography variant="h6" fontWeight="bold">
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
               Past Conversations
             </Typography>
             <IconButton 
@@ -3533,62 +3546,73 @@ const ConversationalAICoach: React.FC<ConversationalAICoachProps> = ({
             </IconButton>
           </Stack>
 
-          <Grid container spacing={2}>
-            {pastConversations.map((conversation) => (
-              <Grid item xs={12} key={conversation.id}>
-                <Paper 
-                  elevation={2} 
-                  sx={{ 
-                    p: 2, 
-                    cursor: 'pointer', 
-                    transition: 'all 0.3s ease',
-                    '&:hover': { 
-                      backgroundColor: 'action.hover',
-                      transform: 'scale(1.01)'
-                    } 
-                  }}
-                  onClick={() => {
-                    console.log('Conversation Selected:', {
-                      id: conversation.id,
-                      topicName: conversation.topicName
-                    });
-                    handleSelectPastConversation(conversation.id);
-                    setIsPastConversationsOpen(false);
-                  }}
-                >
-                  <Grid container justifyContent="space-between" alignItems="center">
-                    <Grid item xs={10}>
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        {conversation.topicName || 'Untitled Conversation'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {new Date(conversation.originalTimestamp).toLocaleString()}
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary" 
-                        sx={{ 
-                          overflow: 'hidden', 
-                          textOverflow: 'ellipsis', 
-                          whiteSpace: 'nowrap' 
-                        }}
-                      >
-                        {conversation.messages?.[0]?.text?.slice(0, 100) || 'No messages'}
-                      </Typography>
+          {isLoadingPastConversations ? (
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                height: 200 
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          ) : pastConversations.length === 0 ? (
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              align="center"
+              sx={{ py: 4 }}
+            >
+              No past conversations found
+            </Typography>
+          ) : (
+            <Grid container spacing={2}>
+              {pastConversations.map((conversation) => (
+                <Grid item xs={12} key={conversation.id}>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ 
+                      p: 2, 
+                      cursor: 'pointer', 
+                      transition: 'background-color 0.3s',
+                      '&:hover': {
+                        backgroundColor: 'action.hover'
+                      }
+                    }}
+                    onClick={() => {
+                      console.log('Conversation Selected:', {
+                        id: conversation.id,
+                        topicName: conversation.topicName
+                      });
+                      handleSelectPastConversation(conversation.id);
+                      setIsPastConversationsOpen(false);
+                    }}
+                  >
+                    <Grid container justifyContent="space-between" alignItems="center">
+                      <Grid item xs={10}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                          {conversation.topicName || 'Unnamed Conversation'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {conversation.messages && conversation.messages.length > 0 
+                            ? `${conversation.messages.length} messages` 
+                            : 'No messages'}
+                        </Typography>
+                      </Grid>
+                      <Grid item>
+                        <Typography variant="caption" color="text.secondary">
+                          {conversation.originalTimestamp 
+                            ? new Date(conversation.originalTimestamp).toLocaleString() 
+                            : 'Unknown date'}
+                        </Typography>
+                      </Grid>
                     </Grid>
-                    <Grid item>
-                      <Chip 
-                        label={`${conversation.messages?.length || 0} Messages`} 
-                        size="small" 
-                        color="secondary" 
-                        variant="outlined"
-                      />
-                    </Grid>
-                  </Grid>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Paper>
       </Collapse>
     </Box>

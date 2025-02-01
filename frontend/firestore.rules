@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Utility function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Utility function to validate conversation document
+    function isValidConversation() {
+      return request.resource.data.keys().hasAll([
+        'userId', 
+        'messages', 
+        'topicName', 
+        'originalTimestamp'
+      ]) &&
+      request.resource.data.userId is string &&
+      request.resource.data.messages is list &&
+      request.resource.data.topicName is string &&
+      request.resource.data.originalTimestamp is number;
+    }
+
+    // Allow users to read and write their own user documents
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Allow authenticated users to read and write conversations
+    match /aicoach_conversations/{conversationId} {
+      // Allow reading any conversation (for now)
+      allow read: if isAuthenticated();
+      
+      // Allow writing conversations with proper validation
+      allow create, update: if 
+        isAuthenticated() && 
+        isValidConversation() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Allow deleting own conversations
+      allow delete: if 
+        isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // Allow all read and write operations during development
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

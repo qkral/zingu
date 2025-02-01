@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: accent-improver-backend
+    env: python
+    buildCommand: |
+      sudo apt-get update
+      sudo apt-get install -y \
+        ffmpeg \
+        libssl-dev \
+        libffi-dev \
+        libsndfile1 \
+        libasound2-dev \
+        libpulse-dev \
+        build-essential
+      
+      python3 -m venv /opt/render/project/venv
+      . /opt/render/project/venv/bin/activate
+      
+      pip install --upgrade pip setuptools wheel
+      pip install --no-cache-dir -r requirements.txt
+      
+      # Additional Azure Speech SDK dependencies
+      pip install --no-cache-dir \
+        azure-cognitiveservices-speech \
+        azure-core \
+        azure-identity
+    
+    startCommand: |
+      . /opt/render/project/venv/bin/activate
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    
+    envVars:
+      - key: PORT
+        fromService:
+          type: web
+          name: accent-improver-backend
+          property: port
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AZURE_SPEECH_KEY
+        sync: false
+      - key: AZURE_SPEECH_REGION
+        sync: false
+      - key: AZURE_SPEECH_ENDPOINT
+        sync: false

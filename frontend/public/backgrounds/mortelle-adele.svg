@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <!-- Background pattern -->
+  <defs>
+    <pattern id="stars" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M25,2 L27,20 L44,25 L27,30 L25,48 L23,30 L6,25 L23,20 Z" fill="#FFD700" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="#FF69B4" opacity="0.2"/>
+  <rect width="100%" height="100%" fill="url(#stars)"/>
+  
+  <!-- Decorative elements -->
+  <g id="decorations">
+    <!-- Comic style bubbles -->
+    <circle cx="100" cy="100" r="30" fill="#FF1493" opacity="0.3"/>
+    <circle cx="700" cy="500" r="40" fill="#FF1493" opacity="0.3"/>
+    <circle cx="200" cy="400" r="25" fill="#FF1493" opacity="0.3"/>
+    <circle cx="600" cy="200" r="35" fill="#FF1493" opacity="0.3"/>
+    
+    <!-- Playful swirls -->
+    <path d="M50,300 Q100,200 150,300 T250,300" stroke="#FF1493" fill="none" stroke-width="3" opacity="0.5"/>
+    <path d="M550,400 Q600,300 650,400 T750,400" stroke="#FF1493" fill="none" stroke-width="3" opacity="0.5"/>
+  </g>
+  
+  <!-- Cat silhouette (representing Ajax) -->
+  <path d="M650,450 Q670,430 690,450 L700,440 Q710,430 720,440 L730,450 Q750,460 730,470 L720,480 Q710,490 700,480 L690,470 Q670,460 650,450 Z" 
+        fill="#FF1493" opacity="0.3"/>
+</svg>
