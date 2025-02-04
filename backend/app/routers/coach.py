@@ -25,7 +25,7 @@ async def start_conversation_endpoint(
 ):
     try:
         # Validate language and accent
-        if language not in ["en", "fr", "es"]:
+        if language not in ["en", "fr", "es", "ar", "it", "zh", "pt"]:
             return {
                 "message": "",
                 "audio": "",
@@ -74,6 +74,20 @@ async def start_conversation_endpoint(
             'es': {
                 'neutral': 'es-ES',
                 'mexican': 'es-MX'
+            },
+            'ar': {
+                'neutral': 'ar-EG',
+                'eg': 'ar-EG',
+                'sa': 'ar-SA'
+            },
+            'it': {
+                'neutral': 'it-IT'
+            },
+            'zh': {
+                'neutral': 'zh-CN'
+            },
+            'pt': {
+                'neutral': 'pt-BR'
             }
         }
         
@@ -110,6 +124,22 @@ async def start_conversation_endpoint(
             'ES-MX': {
                 'language': 'Español',
                 'accent': 'acento mexicano'
+            },
+            'AR-EG': {
+                'language': 'Arabic',
+                'accent': 'Egyptian accent'
+            },
+            'IT-IT': {
+                'language': 'Italiano',
+                'accent': 'Italian accent'
+            },
+            'ZH-CN': {
+                'language': 'Mandarin Chinese',
+                'accent': 'Chinese accent'
+            },
+            'PT-BR': {
+                'language': 'Português',
+                'accent': 'Brazilian accent'
             }
         }
         
@@ -273,6 +303,20 @@ async def transcribe_audio_endpoint(
             'es': {
                 'neutral': 'es-ES',
                 'mexican': 'es-MX'
+            },
+            'ar': {
+                'neutral': 'ar-EG',
+                'eg': 'ar-EG',
+                'sa': 'ar-SA'
+            },
+            'it': {
+                'neutral': 'it-IT'
+            },
+            'zh': {
+                'neutral': 'zh-CN'
+            },
+            'pt': {
+                'neutral': 'pt-BR'
             }
         }
         
@@ -394,6 +438,20 @@ async def analyze_pronunciation_endpoint(
             'es': {
                 'neutral': 'es-ES',
                 'mexican': 'es-MX'
+            },
+            'ar': {
+                'neutral': 'ar-EG',
+                'eg': 'ar-EG',
+                'sa': 'ar-SA'
+            },
+            'it': {
+                'neutral': 'it-IT'
+            },
+            'zh': {
+                'neutral': 'zh-CN'
+            },
+            'pt': {
+                'neutral': 'pt-BR'
             }
         }
         
@@ -573,6 +631,30 @@ async def generate_speech_endpoint(
                     "male": "es-MX-JorgeNeural",
                     "female": "es-MX-DaliaNeural"
                 }
+            },
+            "ar": {
+                "neutral": {
+                    "male": "ar-EG-AhmedNeural",
+                    "female": "ar-EG-NouraNeural"
+                }
+            },
+            "it": {
+                "neutral": {
+                    "male": "it-IT-FrancescoNeural",
+                    "female": "it-IT-IsabellaNeural"
+                }
+            },
+            "zh": {
+                "neutral": {
+                    "male": "zh-CN-YunyangNeural",
+                    "female": "zh-CN-XiaoxiaoNeural"
+                }
+            },
+            "pt": {
+                "neutral": {
+                    "male": "pt-BR-AntonioNeural",
+                    "female": "pt-BR-FranciscaNeural"
+                }
             }
         }
         
@@ -722,6 +804,20 @@ async def generate_initial_message(
         'es': {
             'neutral': 'es-ES',
             'mexican': 'es-MX'
+        },
+        'ar': {
+            'neutral': 'ar-EG',
+            'eg': 'ar-EG',
+            'sa': 'ar-SA'
+        },
+        'it': {
+            'neutral': 'it-IT'
+        },
+        'zh': {
+            'neutral': 'zh-CN'
+        },
+        'pt': {
+            'neutral': 'pt-BR'
         }
     }
     
@@ -738,6 +834,14 @@ async def generate_initial_message(
             language_code = 'fr-FR'
         elif language == 'es':
             language_code = 'es-ES'
+        elif language == 'ar':
+            language_code = 'ar-EG'
+        elif language == 'it':
+            language_code = 'it-IT'
+        elif language == 'zh':
+            language_code = 'zh-CN'
+        elif language == 'pt':
+            language_code = 'pt-BR'
         
     # Language and accent mapping for more descriptive names
     language_accent_mapping = {
@@ -772,6 +876,22 @@ async def generate_initial_message(
          'ES-AR': {
             'language': 'Español',
             'accent': 'acento argentino'
+        },
+        'AR-EG': {
+            'language': 'Arabic',
+            'accent': 'Egyptian accent'
+        },
+        'IT-IT': {
+            'language': 'Italiano',
+            'accent': 'Italian accent'
+        },
+        'ZH-CN': {
+            'language': 'Mandarin Chinese',
+            'accent': 'Chinese accent'
+        },
+        'PT-BR': {
+            'language': 'Português',
+            'accent': 'Brazilian accent'
         }
     }
     
@@ -833,6 +953,50 @@ async def generate_initial_message(
             'debates': "¿Cuál es un tema interesante del que te gustaría discutir o debatir?",
             'current_events': "¿Qué noticia o evento actual ha llamado tu atención?",
             'personal_growth': "¿En qué metas personales estás trabajando actualmente?"
+        },
+        'ar': {
+            'hobbies': "ما هي هواياتك المفضلة؟",
+            'travel': "حدثني عن تجارب السفر المفضلة لديك أو الوجهات التي تحلم بها.",
+            'food': "ما هي طعامك المفضل؟ هل تحب الطبخ؟",
+            'movies': "ما هو نوع الأفلام التي تحب مشاهدة؟ هل هناك أفلام حديثة مفضلة؟",
+            'role_play': "دعونا نتدرب على سيناريو محادثة. تخيل أننا نلتقي لأول مرة.",
+            'everyday_situations': "حدثني عن يومك العادي.",
+            'debates': "ما هو الموضوع المثير الذي تود مناقشته أو مناقشته؟",
+            'current_events': "ما هي الأخبار أو الأحداث الحالية التي لفتت انتباهك؟",
+            'personal_growth': "ما هي الأهداف الشخصية التي تعمل عليها حاليًا؟"
+        },
+        'it': {
+            'hobbies': "Di cosa ti piace parlare? Quali sono i tuoi hobby preferiti?",
+            'travel': "Raccontami delle tue esperienze di viaggio preferite o delle destinazioni che sogni.",
+            'food': "Qual è il tuo cibo preferito? Ti piace cucinare?",
+            'movies': "Che tipo di film ti piace guardare? Ci sono film recenti preferiti?",
+            'role_play': "Praticiamo uno scenario di conversazione. Immaginiamo di incontrarci per la prima volta.",
+            'everyday_situations': "Raccontami di una giornata tipo nella tua vita.",
+            'debates': "Qual è un argomento interessante di cui ti piacerebbe discutere o dibattere?",
+            'current_events': "Qual è l'ultima notizia o evento che ha attirato la tua attenzione?",
+            'personal_growth': "Su quali obiettivi personali stai lavorando attualmente?"
+        },
+        'zh': {
+            'hobbies': "你喜欢做什么？",
+            'travel': "告诉我你最喜欢的旅行经历或梦想中的目的地。",
+            'food': "你最喜欢的食物是什么？你喜欢烹饪吗？",
+            'movies': "你喜欢看什么类型的电影？最近有什么喜欢的电影吗？",
+            'role_play': "我们来练习一个对话场景。想象我们第一次见面。",
+            'everyday_situations': "告诉我你的一天。",
+            'debates': "你想讨论或辩论什么有趣的话题？",
+            'current_events': "最近有什么新闻或事件吸引了你的注意？",
+            'personal_growth': "你目前正在努力实现什么个人目标？"
+        },
+        'pt': {
+            'hobbies': "Do que você gosta de falar? Quais são seus hobbies preferidos?",
+            'travel': "Conte-me sobre suas experiências de viagem preferidas ou destinos que você sonha.",
+            'food': "Qual é sua comida preferida? Você gosta de cozinhar?",
+            'movies': "Que tipo de filmes você gosta de assistir? Há filmes recentes preferidos?",
+            'role_play': "Vamos praticar um cenário de conversa. Imaginemos que estamos nos conhecendo pela primeira vez.",
+            'everyday_situations': "Conte-me sobre um dia típico na sua vida.",
+            'debates': "Qual é um assunto interessante que você gostaria de discutir ou debater?",
+            'current_events': "Qual é a última notícia ou evento que chamou sua atenção?",
+            'personal_growth': "Em quais objetivos pessoais você está trabalhando atualmente?"
         }
     }
     
@@ -903,6 +1067,90 @@ async def generate_initial_message(
             'jungle_safari': 'safari en la jungla',
             'underwater_world': 'mundo submarino',
             'cartoon_characters': 'personajes de dibujos animados'
+        },
+        'ar': {
+            'hobbies': 'هوايات',
+            'travel': 'سفر',
+            'food': 'طعام',
+            'movies': 'أفلام',
+            'role_play': 'تمثيل أدوار',
+            'everyday_situations': 'حالات يومية',
+            'debates': 'مناقشات',
+            'current_events': 'أحداث حالية',
+            'personal_growth': 'نمو شخصي',
+            'animals': 'حيوانات',
+            'superheroes': 'أبطال خارقون',
+            'fairy_tales': 'قصص خرافية',
+            'space_adventure': 'مغامرة فضائية',
+            'dinosaurs': 'ديناصورات',
+            'magic_school': 'مدرسة سحرية',
+            'pirates': 'قراصنة',
+            'jungle_safari': 'سفاري في الغابة',
+            'underwater_world': 'عالم تحت الماء',
+            'cartoon_characters': 'شخصيات كرتونية'
+        },
+        'it': {
+            'hobbies': 'hobby',
+            'travel': 'viaggio',
+            'food': 'cibo',
+            'movies': 'film',
+            'role_play': 'gioco di ruolo',
+            'everyday_situations': 'situazioni quotidiane',
+            'debates': 'dibattiti',
+            'current_events': 'eventi attuali',
+            'personal_growth': 'crescita personale',
+            'animals': 'animali',
+            'superheroes': 'supereroi',
+            'fairy_tales': 'fiabe',
+            'space_adventure': 'avventura spaziale',
+            'dinosaurs': 'dinosauri',
+            'magic_school': 'scuola di magia',
+            'pirates': 'pirati',
+            'jungle_safari': 'safari nella giungla',
+            'underwater_world': 'mondo sottomarino',
+            'cartoon_characters': 'personaggi dei cartoni animati'
+        },
+        'zh': {
+            'hobbies': '兴趣爱好',
+            'travel': '旅行',
+            'food': '食物',
+            'movies': '电影',
+            'role_play': '角色扮演',
+            'everyday_situations': '日常情况',
+            'debates': '辩论',
+            'current_events': '当前事件',
+            'personal_growth': '个人成长',
+            'animals': '动物',
+            'superheroes': '超级英雄',
+            'fairy_tales': '童话',
+            'space_adventure': '太空冒险',
+            'dinosaurs': '恐龙',
+            'magic_school': '魔法学校',
+            'pirates': '海盗',
+            'jungle_safari': '丛林探险',
+            'underwater_world': '水下世界',
+            'cartoon_characters': '卡通人物'
+        },
+        'pt': {
+            'hobbies': 'hobbies',
+            'travel': 'viagem',
+            'food': 'comida',
+            'movies': 'filmes',
+            'role_play': 'jogo de papéis',
+            'everyday_situations': 'situações do dia a dia',
+            'debates': 'debates',
+            'current_events': 'eventos atuais',
+            'personal_growth': 'crescimento pessoal',
+            'animals': 'animais',
+            'superheroes': 'super-heróis',
+            'fairy_tales': 'contos de fadas',
+            'space_adventure': 'aventura espacial',
+            'dinosaurs': 'dinossauros',
+            'magic_school': 'escola de magia',
+            'pirates': 'piratas',
+            'jungle_safari': 'safari na selva',
+            'underwater_world': 'mundo subaquático',
+            'cartoon_characters': 'personagens de desenhos animados'
         }
     }
     
@@ -921,6 +1169,30 @@ async def generate_initial_message(
             f"¡Hola! Soy tu coach de idiomas IA. "
             f"Practiquemos tu {language_details['accent']} en {language_details['language']}. "
             f"Hoy hablaremos sobre {topic_name}. {initial_prompt}"
+        )
+    elif language == 'ar':
+        message = (
+            f"مرحبا! أنا مدربك اللغوي IA. "
+            f"دعونا نتدرب على {language_details['accent']} في {language_details['language']}. "
+            f"اليوم، سنتحدث عن {topic_name}. {initial_prompt}"
+        )
+    elif language == 'it':
+        message = (
+            f"Ciao! Sono il tuo coach linguistico IA. "
+            f"Praticiamo il tuo {language_details['accent']} in {language_details['language']}. "
+            f"Oggi parleremo di {topic_name}. {initial_prompt}"
+        )
+    elif language == 'zh':
+        message = (
+            f"你好! 我是你的语言教练 IA. "
+            f"我们来练习你的 {language_details['accent']} 在 {language_details['language']}. "
+            f"今天，我们将讨论 {topic_name}. {initial_prompt}"
+        )
+    elif language == 'pt':
+        message = (
+            f"Olá! Sou seu treinador de idiomas IA. "
+            f"Vamos praticar seu {language_details['accent']} em {language_details['language']}. "
+            f"Hoje, vamos falar sobre {topic_name}. {initial_prompt}"
         )
     else:  # Default to English
         message = (

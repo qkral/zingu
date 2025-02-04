@@ -7,14 +7,15 @@ import os
 from dotenv import load_dotenv
 import base64
 from app.services import speech, pronunciation, conversation
+from app.main import app
 
 # Load environment variables at startup
 load_dotenv()
 
-app = FastAPI(title="Accent Improver API")
-
 # Configure CORS
-origins = [f"http://localhost:{port}" for port in range(5000, 6000)] + [f"http://127.0.0.1:{port}" for port in range(5000, 6000)]
+origins = [f"http://localhost:{port}" for port in range(5000, 6000)] + [f"http://127.0.0.1:{port}" for port in range(5000, 6000)] + [
+    "https://sample-firebase-ai-app-a0694.web.app"
+]
 
 app.add_middleware(
     CORSMiddleware,

@@ -11,3 +11,4 @@ certifi==2023.7.22
 ffmpeg-python==0.2.0
 cffi==1.16.0
 pycparser==2.22
+deep-translator==1.11.4
